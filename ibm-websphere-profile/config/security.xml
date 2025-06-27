@@ -1,0 +1,17 @@
+<!-- Sample security.xml for IBM WebSphere -->
+<security passwordCachingEnabled="false" adminEnabled="true" appEnabled="true" sessionSecurityIntegration="true" java2SecurityEnabled="true">
+  <version>9.0.5.12</version>
+  <patch>IFIX12345</patch>
+  <fixpack>FP9</fixpack>
+  <SIBus securityEnabled="true"/>
+  <audit enabled="true"/>
+  <LTPAKeySet/>
+  <singleSignon enabled="true"/>
+  <ldap sslEnabled="true"/>
+  <transport protocol="https"/>
+  <dcs sslEnabled="true"/>
+  <MQ sslEnabled="true"/>
+  <jndi securityEnabled="true"/>
+  <role name="admin"/>
+  <authData alias="myAuthAlias"/>
+</security>

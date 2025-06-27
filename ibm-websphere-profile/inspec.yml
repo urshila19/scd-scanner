@@ -1,0 +1,10 @@
+name: ibm-websphere-profile
+title: IBM WebSphere Security Controls
+version: 0.1.0
+summary: InSpec profile for IBM WebSphere security config checks
+maintainer: Your Name
+copyright: Your Company
+license: Apache-2.0
+depends: []
+supports:
+  - os-family: unix
