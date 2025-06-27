@@ -1,0 +1,24 @@
+<!-- Sample Tomcat 7 web.xml -->
+<web-app metadata-complete="true" logEffectiveWebXml="true">
+  <error-page>
+    <exception-type>java.lang.Throwable</exception-type>
+    <location>/error</location>
+  </error-page>
+  <security-constraint>
+    <web-resource-collection>
+      <web-resource-name>Restricted Methods</web-resource-name>
+      <http-method>POST</http-method>
+      <http-method>DELETE</http-method>
+    </web-resource-collection>
+    <user-data-constraint>
+      <transport-guarantee>CONFIDENTIAL</transport-guarantee>
+    </user-data-constraint>
+  </security-constraint>
+  <servlet>
+    <servlet-name>default</servlet-name>
+    <init-param>
+      <param-name>listings</param-name>
+      <param-value>false</param-value>
+    </init-param>
+  </servlet>
+</web-app>

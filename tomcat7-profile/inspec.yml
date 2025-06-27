@@ -1,0 +1,4 @@
+name: tomcat-profile
+title: Apache Tomcat Config Check
+maintainer: DevSec Team
+inspec_version: '>= 4.0'

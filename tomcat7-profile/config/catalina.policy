@@ -1,0 +1,11 @@
+// Sample Tomcat 7 catalina.policy
+// (Add security policy statements as needed)
+
+// Restrict access to sensitive directories
+grant codeBase "file:${catalina.base}/webapps/-" {
+  permission java.io.FilePermission "${catalina.base}/webapps/-", "read";
+};
+// Restrict access to logs
+grant codeBase "file:${catalina.base}/logs/-" {
+  permission java.io.FilePermission "${catalina.base}/logs/-", "read";
+};

@@ -1,0 +1,6 @@
+<!-- Sample Tomcat 7 tomcat-users.xml -->
+<tomcat-users>
+  <role rolename="manager-gui"/>
+  <role rolename="admin-gui"/>
+  <user username="admin" password="securepassword" roles="manager-gui,admin-gui"/>
+</tomcat-users>
