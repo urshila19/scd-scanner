@@ -1,0 +1,4 @@
+name: nginx-profile
+title: Nginx Config Check
+maintainer: DevSec Team
+inspec_version: '>= 4.0'
