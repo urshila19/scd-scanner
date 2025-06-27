@@ -1,0 +1,5 @@
+<!-- Sample Tomcat Windows context.xml -->
+<Context className="org.apache.catalina.core.StandardContext" docBase="/secure/path" antiResourceLocking="true" allowLinking="false" privileged="false" crossContext="false" sessionCookiePathUsesTrailingSlash="false">
+  <Listener className="org.apache.catalina.core.JreMemoryLeakPreventionListener" />
+  <Listener className="org.apache.catalina.security.SecurityListener" />
+</Context>

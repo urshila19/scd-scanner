@@ -1,0 +1,9 @@
+name: tomcat-windows-profile
+title: Tomcat on Windows Config-Only Security Controls
+maintainer: Your Name
+copyright: Your Company
+copyright_email: your@email.com
+license: Apache-2.0
+summary: InSpec profile for Tomcat on Windows config-only security controls
+version: 0.1.0
+depends: []
