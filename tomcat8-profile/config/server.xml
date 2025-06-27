@@ -1,0 +1,19 @@
+# Sample Tomcat 8 server.xml
+<Server port="-1" shutdown="mySecretShutdown">
+  <Listener className="org.apache.catalina.core.AprLifecycleListener"/>
+  <Listener className="org.apache.catalina.core.JreMemoryLeakPreventionListener"/>
+  <Listener className="org.apache.catalina.security.SecurityListener"/>
+  <GlobalNamingResources>
+    <Resource name="UserDatabase" auth="Container" type="org.apache.catalina.UserDatabase"/>
+  </GlobalNamingResources>
+  <Service name="Catalina">
+    <Connector port="8443" protocol="HTTP/1.1" SSLEnabled="true" scheme="https" secure="true" sslProtocol="TLS" xpoweredBy="false" server="CustomServer" allowTrace="false" allowAdditionalPathDelimiters="false" allowCustomStatusMsg="false" connectionTimeout="20000" maxHttpHeaderSize="8192" clientAuth="true" maxPostSize="2097152"/>
+    <Connector port="8009" protocol="AJP/1.3" enabled="false"/>
+    <Engine name="Catalina" defaultHost="localhost">
+      <Host name="localhost"  appBase="webapps" autoDeploy="false" deployOnStartup="false">
+        <Valve className="org.apache.catalina.valves.RemoteAddrValve" resolveHosts="false"/>
+      </Host>
+      <Realm className="org.apache.catalina.realm.LockOutRealm"/>
+    </Engine>
+  </Service>
+</Server>

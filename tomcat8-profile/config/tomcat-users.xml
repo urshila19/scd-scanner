@@ -1,0 +1,4 @@
+<!-- Sample Tomcat 8 tomcat-users.xml -->
+<tomcat-users>
+  <!-- No default users -->
+</tomcat-users>

@@ -1,0 +1,10 @@
+name: tomcat8-profile
+title: Tomcat 8 Security Config Profile
+maintainer: Your Name
+copyright: Your Company
+copyright_email: you@example.com
+license: Apache-2.0
+summary: InSpec profile for Tomcat 8 config-only security controls
+version: 0.1.0
+supports:
+  - os-family: unix
