@@ -11,13 +11,14 @@
 9. Use Cases- CIS Benchmark Checks, Infrastructure Security Audits, Cloud Compliance
 
 "[Config Files]
-↓
+
+	↓
 [InSpec Profiles + Controls]
-↓
+	↓
 [inspec exec]
-↓
+	↓
 [Validation Engine]
-↓
+	↓
 [Result: PASS/FAIL + HTML Report]"		
 		
 		
