@@ -10,16 +10,15 @@
 8. Highly Customizable, you can modify profiles, add org-specific controls or use existing ones from repo			
 9. Use Cases- CIS Benchmark Checks, Infrastructure Security Audits, Cloud Compliance
 
-"[Config Files]
-
-	↓
-[InSpec Profiles + Controls]
-	↓
-[inspec exec]
-	↓
-[Validation Engine]
-	↓
-[Result: PASS/FAIL + HTML Report]"		
+					"[Config Files]
+						↓
+			          [InSpec Profiles + Controls]
+						↓
+			                  [inspec exec]
+						↓
+			               [Validation Engine]
+						↓
+				[Result: PASS/FAIL + HTML Report]"		
 		
 		
 		
