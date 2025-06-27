@@ -1,0 +1,8 @@
+name: ibm-httpd-profile
+version: 0.1.0
+title: IBM HTTP Server InSpec Profile
+depends: []
+supports:
+  - os-family: unix
+  - os-family: linux
+  - os-family: darwin

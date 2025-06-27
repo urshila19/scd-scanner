@@ -1,0 +1,18 @@
+# Log rotation configuration for IBM HTTP Server
+/opt/IBM/HTTPServer/logs/access_log {
+    daily
+    rotate 7
+    compress
+    missingok
+    notifempty
+    create 640 webuser webgroup
+}
+
+/opt/IBM/HTTPServer/logs/error_log {
+    daily
+    rotate 7
+    compress
+    missingok
+    notifempty
+    create 640 webuser webgroup
+}
