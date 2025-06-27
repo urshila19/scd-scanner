@@ -1,0 +1,85 @@
+# This is a sample standalone.xml for JBoss EAP security config checks
+<server xmlns="urn:jboss:domain:4.0">
+  <management>
+    <security-realms>
+      <security-realm name="ManagementRealm">
+        <authentication>
+          <local default-user="$local" allowed-users="*"/>
+        </authentication>
+      </security-realm>
+    </security-realms>
+    <management-interfaces>
+      <http-interface security-realm="ManagementRealm">
+        <http-upgrade enabled="true"/>
+      </http-interface>
+    </management-interfaces>
+  </management>
+  <profile>
+    <subsystem xmlns="urn:jboss:domain:security:2.0">
+      <security-domains>
+        <security-domain name="other" cache-type="default">
+          <authentication>
+            <login-module code="Remoting" flag="optional"/>
+          </authentication>
+        </security-domain>
+      </security-domains>
+      <role-mapping>
+        <role name="Admin">
+          <include>
+            <user name="admin"/>
+          </include>
+        </role>
+      </role-mapping>
+      <permission-combination-policy policy="permissive"/>
+      <credential-store name="cs1" path="cs1.store" relative-to="jboss.server.config.dir">
+        <credential name="mycred" clear-text="supersecret"/>
+        <credential-reference clear-text="changeit"/>
+      </credential-store>
+      <!-- Example usage of stored credential -->
+      <example-password>${VAULT::cs1::mycred}</example-password>
+      <!-- Example encrypted string -->
+      <example-encrypted>ENC(encryptedvalue)</example-encrypted>
+    </subsystem>
+    <subsystem xmlns="urn:jboss:domain:logging:3.0">
+      <file-handler name="FILE" autoflush="true">
+        <formatter>
+          <pattern-formatter pattern="%d{yyyy-MM-dd HH:mm:ss,SSS} %-5p [%c] (%t) %s%E%n"/>
+        </formatter>
+        <file relative-to="jboss.server.log.dir" path="server.log"/>
+        <append value="true"/>
+      </file-handler>
+      <periodic-rotating-file-handler name="PERIODIC" autoflush="true">
+        <formatter>
+          <pattern-formatter pattern="%d{yyyy-MM-dd HH:mm:ss,SSS} %-5p [%c] (%t) %s%E%n"/>
+        </formatter>
+        <file relative-to="jboss.server.log.dir" path="server.log"/>
+        <suffix value=".yyyy-MM-dd"/>
+        <append value="true"/>
+      </periodic-rotating-file-handler>
+      <size-rotating-file-handler name="SIZE" autoflush="true">
+        <formatter>
+          <pattern-formatter pattern="%d{yyyy-MM-dd HH:mm:ss,SSS} %-5p [%c] (%t) %s%E%n"/>
+        </formatter>
+        <file relative-to="jboss.server.log.dir" path="server-size.log"/>
+        <rotate-size value="10m"/>
+        <max-backup-index value="5"/>
+      </size-rotating-file-handler>
+      <syslog-handler name="SYSLOG" hostname="localhost" port="514" facility="AUTH"/>
+    </subsystem>
+    <subsystem xmlns="urn:jboss:domain:undertow:4.0">
+      <server name="default-server">
+        <https-listener name="https" socket-binding="https" security-realm="ManagementRealm"/>
+        <ssl name="ssl" key-store="myKeystore.jks" key-store-password="changeit"/>
+      </server>
+    </subsystem>
+  </profile>
+  <interfaces>
+    <interface name="management" security-realm="ManagementRealm">
+      <inet-address value="127.0.0.1"/>
+    </interface>
+  </interfaces>
+  <socket-binding-group name="standard-sockets" default-interface="public">
+    <socket-binding name="http" port="8080"/>
+    <socket-binding name="https" port="8443"/>
+  </socket-binding-group>
+</server>

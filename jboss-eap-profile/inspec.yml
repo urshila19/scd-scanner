@@ -1,0 +1,13 @@
+# encoding: utf-8
+# jboss-eap-profile/inspec.yml
+name: jboss-eap-profile
+title: JBoss EAP Security Controls
+maintainer: Your Name
+copyright: Your Company
+copyright_email: you@example.com
+license: Apache-2.0
+summary: InSpec profile for JBoss EAP security configuration
+version: 0.1.0
+depends: []
+supports:
+  - platform: os
