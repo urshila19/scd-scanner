@@ -1,0 +1,56 @@
+# Azure Pipelines configuration for Inspectra project
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- task: UseRubyVersion@2
+  inputs:
+    version: '2.7.x'
+
+- script: |
+    gem install inspec
+    inspec exec . --reporter json:reports/scan_report.json
+  displayName: 'Run InSpec Tests'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: 'reports'
+    ArtifactName: 'Inspectra-Reports'
+    publishLocation: 'Container'
+
+- task: Docker@2
+  displayName: 'Build Docker Image'
+  inputs:
+    command: 'build'
+    dockerfile: 'Dockerfile'
+    tags: 'latest'
+    buildContext: '.'
+
+- task: Docker@2
+  displayName: 'Run Simple Test in Docker Container'
+  inputs:
+    command: 'run'
+    arguments: '--rm inspectra echo "Docker container is working as expected"'
+    containerName: 'inspectra-simple-test'
+
+- task: Docker@2
+  displayName: 'Run All Profiles in Docker Container'
+  inputs:
+    command: 'run'
+    arguments: '--rm -v $(System.DefaultWorkingDirectory)/src:/app/src -v $(System.DefaultWorkingDirectory)/reports:/app/reports inspectra /usr/local/bin/run_all_profiles.sh'
+    containerName: 'inspectra-run-all-profiles'
+
+- script: |
+    ./run_all_profiles.sh
+  displayName: 'Run InSpec Profiles'
+  env:
+    PROFILES_DIR: '/app/src'
+    REPORTS_DIR: '/app/reports'
+    OUTPUT_FORMAT: 'html'
+
+- script: |
+    docker logs inspectra-test
+  displayName: 'Check Docker Container Logs'
