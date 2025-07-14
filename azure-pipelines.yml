@@ -1,0 +1,22 @@
+# Updated Azure Pipelines configuration for Inspectra project
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- task: UseRubyVersion@1
+  inputs:
+    version: '2.7.x'
+
+- script: |
+    gem install inspec
+    inspec exec . --reporter json:reports/scan_report.json
+  displayName: 'Run InSpec Tests'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: 'reports'
+    ArtifactName: 'Inspectra-Reports'
+    publishLocation: 'Container'
