@@ -10,6 +10,8 @@
 8. Highly Customizable, you can modify profiles, add org-specific controls or use existing ones from repo			
 9. Use Cases- CIS Benchmark Checks, Infrastructure Security Audits, Cloud Compliance
 
+    docker run --rm -v $(pwd)/controls:/app/controls -v $(pwd)/reports:/app/reports -v $(pwd)/test:/app/test inspectra-webserver
+
 							[Config Files]
 							       ↓
 						[InSpec Profiles + Controls]
