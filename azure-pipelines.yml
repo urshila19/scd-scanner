@@ -1,139 +1,133 @@
-pool:
-  vmImage: 'ubuntu-latest'
+trigger:
+  branches:
+    include:
+      - "*"
 
 parameters:
-- name: targetType
-  displayName: 'Target Type'
-  type: string
-  default: 'os'
-  values:
-  - os
-  - webserver
+  - name: target
+    displayName: "Target to build and test"
+    type: string
+    default: all
+    values:
+      - all
+      - inspectra-webserver
+      - inspectra-os
 
-variables:
-  TAG: '0.0.2' # Initialize TAG variable
-  TARGET_DIR_OS: 'inspectra-os'
-  TARGET_DIR_WEBSERVER: 'inspectra-webserver'
+stages:
+  - stage: InspectraWebserver
+    displayName: "Inspectra Webserver Compliance"
+    condition: or(eq('${{parameters.target}}', 'all'), eq('${{parameters.target}}', 'inspectra-webserver'))
+    jobs:
+      - job: BuildAndTestWebserver
+        displayName: "Build and Run inspectra-webserver"
+        pool:
+          vmImage: "ubuntu-latest"
+        steps:
+          - script: |
+              echo "Setting up directory structure..."
+              mkdir -p $(Build.ArtifactStagingDirectory)/webserver_reports
+              mkdir -p $(Build.SourcesDirectory)/inspectra-webserver/controls
+              mkdir -p $(Build.SourcesDirectory)/inspectra-webserver/test
+              chmod -R 777 $(Build.ArtifactStagingDirectory)/webserver_reports
+            displayName: "Prepare directories"
 
-steps:
-- script: |
-    echo 'Determining Docker image tag...'
-    if [ -z "$(TAG)" ]; then
-      if [ "$(Build.SourceTag)" != "" ]; then
-        TAG=$(Build.SourceTag)
-      else
-        TAG=$(Build.SourceBranchName)-$(Build.SourceVersion)
-      fi
-      echo "##vso[task.setvariable variable=TAG]$TAG"
-      echo "Docker image tag set to: $TAG"
-    else
-      echo "TAG is already initialized with value: $TAG"
-    fi
-  displayName: 'Set Docker image tag'
+          - task: Docker@2
+            displayName: "Build inspectra-webserver Docker image"
+            inputs:
+              command: build
+              Dockerfile: inspectra-webserver/Dockerfile
+              tags: |
+                inspectra-webserver:$(Build.BuildId)
+              buildContext: $(Build.SourcesDirectory)/inspectra-webserver
+              repository: inspectra-webserver
 
-# Build inspectra-os Docker image only if os target type is selected
-- task: Docker@2
-  displayName: 'Build inspectra-os Docker Image'
-  condition: eq('${{parameters.targetType}}', 'os')
-  inputs:
-    command: 'build'
-    dockerfile: '$(System.DefaultWorkingDirectory)/$(TARGET_DIR_OS)/Dockerfile'
-    repository: 'inspectra-os'
-    tags: '$(TAG)'
-    buildContext: '$(System.DefaultWorkingDirectory)/$(TARGET_DIR_OS)'
+          - script: |
+              echo "Running inspectra-webserver compliance checks..."
+              
+              # Debug directory structure
+              echo "Available test configs:"
+              find $(Build.SourcesDirectory)/inspectra-webserver/test -type f | sort
+              
+              # Run Docker with all required volume mounts
+              docker run --rm --user root \
+                -v $(Build.SourcesDirectory)/inspectra-webserver/controls:/app/controls \
+                -v $(Build.SourcesDirectory)/inspectra-webserver/test:/app/test \
+                -v $(Build.SourcesDirectory)/inspectra-webserver/src:/app/src \
+                -v $(Build.ArtifactStagingDirectory)/webserver_reports:/app/reports \
+                -e CHEF_LICENSE=accept \
+                -e INSPEC_LICENSE=accept \
+                inspectra-webserver:$(Build.BuildId) bash -c "
+                  # Fix permissions
+                  chmod -R 777 /app/reports /app/controls /app/test
+                  
+                  # Check InSpec installation
+                  echo 'InSpec version:'
+                  inspec --version
+                  
+                  # Run the profile script
+                  /usr/local/bin/run_all_profiles.sh
+                "
+                
+              # Show generated reports
+              echo "Generated reports:"
+              find $(Build.ArtifactStagingDirectory)/webserver_reports -type f | sort
+            displayName: "Run inspectra-webserver compliance checks"
 
-# Build inspectra-webserver Docker image only if webserver target type is selected
-- task: Docker@2
-  displayName: 'Build inspectra-webserver Docker Image'
-  condition: eq('${{parameters.targetType}}', 'webserver')
-  inputs:
-    command: 'build'
-    dockerfile: '$(System.DefaultWorkingDirectory)/$(TARGET_DIR_WEBSERVER)/Dockerfile'
-    repository: 'inspectra-webserver'
-    tags: '$(TAG)'
-    buildContext: '$(System.DefaultWorkingDirectory)/$(TARGET_DIR_WEBSERVER)'
+          - publish: $(Build.ArtifactStagingDirectory)/webserver_reports
+            artifact: webserver_reports
+            displayName: "Publish webserver compliance reports"
 
-- bash: |
-    echo 'Creating reports directory for generated files'
-    mkdir -p $(System.DefaultWorkingDirectory)/reports
-    chmod 777 $(System.DefaultWorkingDirectory)/reports
-    ls -la $(System.DefaultWorkingDirectory)/reports
+  - stage: InspectraOS
+    displayName: "Inspectra OS Compliance"
+    condition: or(eq('${{parameters.target}}', 'all'), eq('${{parameters.target}}', 'inspectra-os'))
+    jobs:
+      - job: BuildAndTestOS
+        displayName: "Build and Run inspectra-os"
+        pool:
+          vmImage: "ubuntu-latest"
+        steps:
+          - script: |
+              echo "Setting up directory structure..."
+              mkdir -p $(Build.ArtifactStagingDirectory)/os_reports
+              chmod -R 777 $(Build.ArtifactStagingDirectory)/os_reports
+            displayName: "Prepare directories"
 
-    echo "Running run_all_profiles for ${{parameters.targetType}}"
-    
-    if [[ "${{parameters.targetType}}" == "os" ]]; then
-      # Run as root user for os target
-      docker run --rm -v $(System.DefaultWorkingDirectory)/$(TARGET_DIR_OS):/app -v $(System.DefaultWorkingDirectory)/reports:/app/reports inspectra-os:$(TAG) bash -c "
-        # Switch back to root if needed for permissions
-        if id inspectra_os &>/dev/null; then
-          su - root
-        fi
-        
-        # Fix potential PATH issues for InSpec
-        export GEM_HOME=/var/lib/gems/$(ruby -e 'puts RUBY_VERSION.split(\".\")[0..1].join(\".\")')
-        export PATH=\$GEM_HOME/bin:\$PATH
-        
-        # Fix permissions for script
-        chmod +x /app/run_all_profiles.sh
-        
-        # Debug InSpec installation
-        echo 'Checking InSpec installation:'
-        which inspec || echo 'InSpec command not found in PATH'
-        find / -name inspec -type f 2>/dev/null
-        echo 'Current PATH:'
-        echo \$PATH
-        
-        # Run with explicit path to inspec if necessary
-        INSPEC_PATH=\$(find / -name inspec -type f 2>/dev/null | head -n 1)
-        if [ ! -z \"\$INSPEC_PATH\" ]; then
-          echo \"Using InSpec at \$INSPEC_PATH\"
-          sed -i \"s|inspec|$INSPEC_PATH|g\" /app/run_all_profiles.sh
-        fi
-        
-        # Run the profile
-        cd /app && bash /app/run_all_profiles.sh
-      "
-    elif [[ "${{parameters.targetType}}" == "webserver" ]]; then
-      # Run as root user for webserver target (even though Dockerfile specifies inspectra_webserver user)
-      docker run --rm --user root \
-        -v $(System.DefaultWorkingDirectory)/controls:/app/controls \
-        -v $(System.DefaultWorkingDirectory)/reports:/app/reports \
-        -v $(System.DefaultWorkingDirectory)/test:/app/test \
-        -v $(System.DefaultWorkingDirectory)/$(TARGET_DIR_WEBSERVER)/src:/app/src \
-        inspectra-webserver:$(TAG) bash -c "
-        # Fix potential PATH issues for InSpec
-        export GEM_HOME=/var/lib/gems/$(ruby -e 'puts RUBY_VERSION.split(\".\")[0..1].join(\".\")')
-        export PATH=\$GEM_HOME/bin:\$PATH
-        
-        # Fix permissions for script and directories
-        chmod +x /usr/local/bin/run_all_profiles.sh
-        chmod -R 777 /app/reports /app/controls /app/test
-        
-        # Debug InSpec installation
-        echo 'Checking InSpec installation:'
-        which inspec || echo 'InSpec command not found in PATH'
-        find / -name inspec -type f 2>/dev/null
-        echo 'Current PATH:'
-        echo \$PATH
-        
-        # Run with explicit path to inspec if necessary
-        INSPEC_PATH=\$(find / -name inspec -type f 2>/dev/null | head -n 1)
-        if [ ! -z \"\$INSPEC_PATH\" ]; then
-          echo \"Using InSpec at \$INSPEC_PATH\"
-          sed -i \"s|inspec|$INSPEC_PATH|g\" /usr/local/bin/run_all_profiles.sh
-        fi
-        
-        # Run the profile
-        CHEF_LICENSE=accept INSPEC_LICENSE=accept /usr/local/bin/run_all_profiles.sh
-      "
-    else
-      echo "Unknown target type: ${{parameters.targetType}}"
-      exit 1
-    fi
-  displayName: 'Run run_all_profiles based on selected target type'
+          - task: Docker@2
+            displayName: "Build inspectra-os Docker image"
+            inputs:
+              command: build
+              Dockerfile: inspectra-os/Dockerfile
+              tags: |
+                inspectra-os:$(Build.BuildId)
+              buildContext: $(Build.SourcesDirectory)/inspectra-os
+              repository: inspectra-os
 
-- task: PublishPipelineArtifact@1
-  displayName: 'Publish generated InSpec reports'
-  inputs:
-    targetPath: $(System.DefaultWorkingDirectory)/reports
-    artifact: 'Inspectra-Reports-${{parameters.targetType}}'
+          - script: |
+              echo "Running inspectra-os compliance checks..."
+              
+              # Run Docker with all required volume mounts
+              docker run --rm --user root \
+                -v $(Build.SourcesDirectory)/inspectra-os/src:/app/src \
+                -v $(Build.ArtifactStagingDirectory)/os_reports:/app/reports \
+                -e CHEF_LICENSE=accept \
+                -e INSPEC_LICENSE=accept \
+                inspectra-os:$(Build.BuildId) bash -c "
+                  # Fix permissions
+                  chmod -R 777 /app/reports
+                  
+                  # Check InSpec installation
+                  echo 'InSpec version:'
+                  inspec --version
+                  
+                  # Run the profile script
+                  /app/run_all_profiles.sh
+                "
+                
+              # Show generated reports
+              echo "Generated reports:"
+              find $(Build.ArtifactStagingDirectory)/os_reports -type f | sort
+            displayName: "Run inspectra-os compliance checks"
+
+          - publish: $(Build.ArtifactStagingDirectory)/os_reports
+            artifact: os_reports
+            displayName: "Publish OS compliance reports"
