@@ -1,0 +1,46 @@
+S. No.,Testcase Name,Primary Tool(s),Coverage,Suggested Approach,Example Invocation (Template),Gaps / Custom Work
+1,Data Ingestion Validation & Sanitization,Giskard,High (pre-ingestion scans),Scan datasets for PII/toxicity/injection patterns before indexing; fail pipeline on findings.,"Python (within your pipeline):
+from giskard.scanner import scan
+report = scan(dataset_or_df, model=None, params={""pii"": True, ""toxicity"": True})
+report.save(""giskard_ingestion_report.html"")","Add custom detectors for XXE, path traversal, and file-format validation (schema, MIME, size)."
+2,Document/Index Poisoning Detection,"Giskard (+ custom), Garak (partial)",Medium (heuristics),Flag hidden instructions/backdoors at rest; add string/regex rules for prompt-injection banners and unicode tricks; probe retrieval path.,"Giskard rules (pseudo):
+custom_checks = [detect_hidden_instructions, detect_zero_width_chars]
+results = run_checks(indexed_docs, custom_checks)
+
+Garak (simulate retrieval->LLM effects):
+garak -m <provider>:<model> -p prompt_injection --max_tests 100 --outfile garak_poisoning.json",Build a KB scanner that walks your vector store / index and runs rules; integrate with your retriever to test doc->context flow.
+3,Source Authenticity & Whitelisting,Custom (pipeline enforcement),Low (tool-native),"Enforce allow/deny lists at ingestion; cryptographically verify sources (signed feeds, checksums).","Pipeline policy (YAML-ish):
+allow_sources: [trusted_feed_A, trusted_git_repo]
+deny_sources: [""*"", ""!trusted_*""]
+on_violation: block + alert",Implement policy checks in your ingestion service and add unit tests; none of the three tools natively cover this.
+4,PII and Secrets Redaction in KB,Giskard,High,Run PII/secret scanners on documents pre- and post-ingestion; block or mask sensitive spans.,"Python:
+from giskard.scanner import scan
+report = scan(docs_df, model=None, params={""pii"": True, ""secrets"": True})
+report.filter(findings=[""pii"",""secrets""]).to_markdown()","Add detection for organization-specific tokens (e.g., internal IDs); verify masking on retrieval path."
+5,Retrieval‑Stage Prompt Injection Mitigation,"NVIDIA Garak, Azure Counterfit",High (attack simulation),Use injection/jailbreak probes to craft adversarial queries; validate guardrails neutralize embedded instructions before LLM.,"Garak (typical):
+garak -m <provider>:<model> -p injection,jailbreak --max_tests 200 --outfile garak_injection.json
+
+Counterfit (conceptual):
+counterfit run --target <endpoint> --attack prompt_injection --inputs inputs.json --out cf_results.json",Tune probes to pull attacker-controlled docs from KB; assert sanitizer removes instructions before model call.
+6,Context Leakage Prevention,"Garak, Azure Counterfit (+ Giskard for detection)",Medium-High,Attempt exfiltration with crafted prompts & cross-tenant identifiers; assert redaction/deny rules on retrieved context.,"Garak:
+garak -m <provider>:<model> -p data_leakage --outfile garak_leakage.json
+
+Counterfit:
+counterfit run --target <endpoint> --attack data_exfiltration --inputs tenant_probe.json",Use synthetic private strings per tenant and check they never appear; add redaction unit tests at retriever output.
+7,Retrieval Quality and Relevance Guardrail,Giskard,Medium,Score retrieved chunks for relevance/toxicity/NSFW before passing to LLM; fail if below threshold.,"Python (sketch):
+scores = giskard.evaluate_relevance(query, retrieved_docs)
+tox = giskard.score_toxicity(retrieved_docs)
+assert scores.min() >= 0.7 and tox.max() <= 0.2",Define concrete thresholds and golden sets; integrate into retriever middleware.
+8,Cache and Embedding Store Poisoning Detection,Custom (monitoring),Low (tool-native),Add integrity checksums and canary vectors; periodically diff embeddings & cache entries.,"Integrity job (pseudo-cron):
+for item in embedding_store: verify_hash(item.vector, item.hash)
+on_mismatch: purge(item); alert(Security)",None of the three tools handle vector DB integrity; build a lightweight auditor for Pinecone/FAISS/pgvector/etc.
+9,Pipeline Integrity and Configuration Drift Detection,Custom + CI (with any tool as a step),Low (tool-native),Track retriever/ranker/chunker config in git; run drift checks in CI and at runtime.,"CI step (pseudo):
+git diff --exit-code configs/retrieval.yaml || fail('Drift detected')
+python integrity_probe.py --expect configs/retrieval.yaml",Use signing (SLSA/attestations) for pipeline components; alert on runtime config differences.
+10,RAG Security Testing in CI/CD,All (orchestrated),Medium,"Automate Garak/Giskard/Counterfit runs on PRs that change prompts, KB, or pipeline code; publish artifacts.","GitHub Actions (fragment):
+- name: Garak injection tests
+  run: garak -m <provider>:<model> -p injection --outfile garak.json
+- name: Giskard dataset scan
+  run: python scripts/giskard_scan.py
+- name: Counterfit endpoint checks
+  run: counterfit run --target $ENDPOINT --attack data_exfiltration --inputs inputs.json","Add gates (min score, no critical findings) to block merges; store reports as build artifacts."

@@ -1,0 +1,48 @@
+S. No.,Testcase Name,Giskard (Coverage/Example),NVIDIA Garak (Coverage/Example),Azure Counterfit (Coverage/Example),PowerPwn (Coverage/Example),IBM ART (Coverage/Example),Gaps / Custom Work
+1,Data Ingestion Validation & Sanitization,"High — pre-ingestion scans for PII/toxicity/injection.
+Example:
+from giskard.scanner import scan
+report = scan(df, model=None, params={'pii':True,'toxicity':True}); report.save('giskard_ingestion.html')",Low — not focused on pre-index dataset validation.,"Low — primarily endpoint attack harness.
+Example:
+counterfit run --target <endpoint> --attack input_validation --inputs data.json","None — scope is Power Platform/agent workflows, not data quality.","Medium — use poisoning/evasion checks to vet datasets.
+Example:
+from art.attacks.poisoning import PoisoningAttackBackdoor","Add format/schema/MIME validators; custom detectors for XXE, path traversal, oversized files."
+2,Document/Index Poisoning Detection,"Medium — add custom rules for hidden instructions/unicode.
+Example:
+custom_checks=[detect_hidden_instr, detect_zero_width]; run_checks(index_docs, custom_checks)","Medium — simulate prompt-injection effects from poisoned docs.
+Example:
+garak -m <provider>:<model> -p prompt_injection -o garak_poison.json","Low — not KB scanning; can still test endpoint behavior with poisoned content.
+Example:
+counterfit run --attack prompt_injection --inputs prompts.json","Low-Medium — if Power Platform is the ingestion path, use exfil/prompt-injection playbooks.","High — simulate and detect poisoning resilience (backdoors, clean-label poison).
+Example:
+from art.attacks.poisoning import PoisoningAttackCleanLabel",Build a KB/index walker for your vector DB to apply checks at rest; add unicode/regex rules.
+3,Source Authenticity & Whitelisting,None — not a policy engine.,None,None,None,None,Implement allow/deny lists and signature checks in ingestion microservice; add unit tests.
+4,PII and Secrets Redaction in KB,"High — PII/secret scanning pre/post ingestion.
+Example:
+scan(docs_df, model=None, params={'pii':True,'secrets':True})",Low — not aimed at PII detection in datasets.,Low — endpoint oriented; possible to craft probes verifying redaction.,None,Low — ART is not a PII scanner; can help craft adversarial probes to test leakage.,Org-specific token detectors; enforce masking in retriever output stage.
+5,Retrieval‑Stage Prompt Injection Mitigation,Medium — write custom pre-LLM sanitization tests around retrieved context.,"High — strong injection/jailbreak probes.
+Example:
+garak -m <provider>:<model> -p injection,jailbreak -o garak_injection.json","High — simulate injection payloads against endpoints.
+Example:
+counterfit run --attack prompt_injection --inputs inputs.json -o cf_results.json",High — prompt-injection and exfil playbooks for agent/workflow chains.,"Low — ART focuses on adversarial examples, not LLM injection.",Assert sanitizer removes embedded instructions before LLM call; add golden prompts.
+6,Context Leakage Prevention,Medium — evaluate outputs for memorization/PII; combine with redaction checks.,"High — data exfiltration probes.
+Example:
+garak -m <provider>:<model> -p data_leakage -o garak_leak.json","High — exfiltration simulation to deployed endpoints.
+Example:
+counterfit run --attack data_exfiltration --inputs tenant_probe.json",High — exfiltration/pivot attempts through connected services.,Low — ART not aimed at LLM leakage; can craft adversarial inputs to stress filters.,Seed synthetic secrets per tenant; verify they never surface; add deny-list patterns.
+7,Retrieval Quality & Relevance Guardrail,"Medium — relevance/toxicity scoring for retrieved chunks.
+Example:
+score = giskard.evaluate_relevance(q, docs)",None — not focused on relevance scoring.,None,None,Low — ART can craft adversarial inputs but not rank retrieval relevance.,Define thresholds and golden sets; enforce in retriever middleware.
+8,Cache & Embedding Store Poisoning Detection,None — outside tool scope.,None,None,None,"Medium — simulate poisoned vectors/backdoors to evaluate model sensitivity.
+Example:
+from art.attacks.poisoning import BackdoorAttack",Implement integrity checksums/canary vectors; periodic diff scans; purge on mismatch.
+9,Pipeline Integrity & Configuration Drift Detection,None,None,None,None,None,Track retriever/ranker/chunker config in git; sign artifacts; runtime drift probes with alerts.
+10,RAG Security Testing in CI/CD,"Medium — run dataset scans on PRs.
+Example:
+python scripts/giskard_scan.py","Medium — run injection/leakage suites.
+Example:
+garak -m <provider>:<model> -p injection,data_leakage","Medium — automate endpoint attacks in pipeline.
+Example:
+counterfit run --plan plan.yaml",Medium — orchestrate PowerShell jobs for agent/flow security tests.,"Medium — include ART adversarial/poisoning jobs in CI.
+Example:
+python art_poison_eval.py",Set merge gates (no critical findings); store JSON/HTML reports as artifacts.
