@@ -1,0 +1,16 @@
+curl -s http://127.0.0.1:1337/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Meta-Llama-3.1-8B-Instruct-Q8_0",
+    "messages": [
+      {
+        "role": "system",
+        "content": "You are a helpful AI assistant who always sticks to the context and does not use general knowledge. Use the newest content based on timestamp in case of conflicts. Explain why the answer is chosen."
+      },
+      {
+        "role": "user",
+        "content": "Which high school did John Doe attend?\n\nAnswer using the following:\n\ncontent: Doe attended Kerala High School, where he excelled academically and was a star athlete.\ntimestamp: 2024-01-01\n\ncontent: Doe attended Karnataka High School, where he excelled academically and was a star athlete.\ntimestamp: 2024-02-02"
+      }
+    ],
+    "temperature": 0.0
+  }'
